@@ -12,7 +12,7 @@ class AdditiveAttention(nn.Module):
 
         self.proj=nn.Sequential(nn.Linear(self.in_dim,self.v_size),nn.Tanh())
         self.proj_v=nn.Linear(self.v_size,1)
-    def forward(self,context):
+    def forward(self,context,mask=None):
         """
         加性注意力机制
         :param context: [batch_size,seq_len,in_dim]
@@ -22,6 +22,8 @@ class AdditiveAttention(nn.Module):
         # proj->[B,seq_len,v_size], proj_v->[B,seq_len,1]
         # 因为下一步要用softmax打分得到每个token的权重，需要去除最后一维度
         weights=self.proj_v(self.proj(context)).squeeze(-1)
+        if mask is not None:
+            weights=weights.masked_fill(mask,-1e9)
         weights=torch.softmax(weights,dim=-1) # [B,seq_len]
         # bmm批量矩阵乘法，要求两个输入都必须是3D张量，且第一维相等
         # unsqueeze升维 weights->[B,1,seq_len]，最终得到[B,seq_len]
@@ -33,7 +35,7 @@ class TextEncoder(nn.Module):
         super(TextEncoder, self).__init__()
         self.hparams = hparams
         if weight is None:
-            self.embedding=nn.Embedding(100,300)
+            self.embedding = nn.Embedding(hparams['vocab_size'], hparams['embed_dim'], padding_idx=0)
         else:
             self.embedding = nn.Embedding.from_pretrained(weight, freeze=False,padding_idx=0)
 
@@ -50,10 +52,21 @@ class TextEncoder(nn.Module):
         self.additive_attention = AdditiveAttention(hparams['encoder_size'], hparams['v_size'])
 
     def forward(self, x):
-        # x [batch_size, seq_len], 划分后的新闻标题数据，固定长度为seq_len
-        x = F.dropout(self.embedding(x), p=0.2, training=self.training)
-        output,_=self.multihead_attention(x,x,x)
+        """
+        将新闻中各个token embedding聚合为一个embedding
+        :param x: [batch_size, seq_len], 划分后的新闻标题数据，固定长度为seq_len
+        :return: [batch_size,encoder_size]
+        """
+        padding_mask=(x==0)
+        for i in range(padding_mask.shape[0]):
+            if padding_mask[i].all():
+                padding_mask[i, 0] = False
+
+        x = F.dropout(self.embedding(x), p=0.2, training=self.training) # [B,seq_len,embed_dim]
+        output,_=self.multihead_attention(x,x,x,key_padding_mask=padding_mask) # [B,seq_len,embed_dim]
+
         output = F.dropout(output, p=0.2, training=self.training)
-        output=self.proj(output)
-        output,_=self.additive_attention(output)
+        output=self.proj(output) #　[B,seq_len,encoder_size]
+
+        output,_=self.additive_attention(output,mask=padding_mask) #　[B,encoder_size]
         return output

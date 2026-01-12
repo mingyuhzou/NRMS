@@ -1,0 +1,12 @@
+hparams={ 'dct_size': 'auto',
+        'nhead': 10,
+        'embed_dim': 300,
+        'encoder_size': 250,
+        'v_size': 200,
+        'model_path':'/home/ming/NRMS/Data/model_weight/model_epoch10.pth',
+        "news_file":'/home/ming/NRMS/Data/small_news.parquet',
+        "behaviors_file":'/home/ming/NRMS/Data/MINDsmall_train/behaviors.parquet',
+        "w2v_file":'/home/ming/NRMS/Data/W2vec.pkl',
+        'lr':1e-3,
+        'epochs':10,
+}
