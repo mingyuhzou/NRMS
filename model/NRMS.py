@@ -25,9 +25,7 @@ class NRMS(nn.Module):
 
         click_mask = (clicks.sum(dim=-1) == 0)
         # 防止全被遮蔽
-        for i in range(click_mask.shape[0]):
-            if click_mask[i].all():
-                click_mask[i, 0] = False
+        click_mask[click_mask.all(dim=1), 0] = False
 
         # 把所有新闻看作一个大批次，DocEncoder只能处理二维输入
         clicks=clicks.reshape(-1,seq_len) # 【num_user*num_click_docs,seq_len】

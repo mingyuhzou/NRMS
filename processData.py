@@ -3,6 +3,7 @@ import numpy as np
 import polars as pl
 import pickle
 import re
+from config import hparams
 # %%
 def processW2vec(news_file,W2vec_file,save_path):
     """
@@ -41,7 +42,7 @@ def processW2vec(news_file,W2vec_file,save_path):
         pickle.dump({'w2id':w2id,'embedding':embeddings},f)
     print(f"共有{len(vocab)}个单词，匹配到GloVe词汇: {cnt}, 未匹配到的数量为{len(vocab)-cnt}")
 
-# processW2vec('/home/ming/NRMS/Data/small_news.parquet','/home/ming/NRMS/Data/glove.txt','/home/ming/NRMS/Data/W2vec.pkl')
+processW2vec(hparams['news_file'], hparams['vocab_file'], hparams['w2v_file'])
 
 def processNews(news_path,w2v_path,max_len=20):
     """

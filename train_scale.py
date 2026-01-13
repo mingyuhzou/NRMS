@@ -8,6 +8,7 @@ from dataset import trainDataset
 from torch.utils.data import DataLoader
 import pickle
 from tqdm import tqdm
+from torch.cuda.amp import autocast,GradScaler
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 news_file=hparams['news_file']
@@ -31,6 +32,9 @@ optimizer=optim.Adam(model.parameters(),lr=hparams['lr'])
 # optimizer=optim.Adam(model.parameters(),lr=hparams['lr'],weight_decay=1e-5)
 # optimizer=optim_.Ranger(model.parameters(),lr=hparams['lr'])
 
+# 缩放，泳衣防止梯度下溢
+scaler = torch.amp.GradScaler('cuda')
+
 def train():
     model.train()
     for epoch in range(1,hparams['epochs']+1):
@@ -41,11 +45,20 @@ def train():
             labels=labels.to(device)
 
             optimizer.zero_grad()
-            scores=model(click_docs,cand_docs)
-            loss=criterion(scores,labels)
 
-            loss.backward()
-            optimizer.step()
+            # 开启自动混合精度上下文，让GPU自动使用更低的精度，减少显存加速计算
+            # 原来：with autocast():
+            with torch.amp.autocast('cuda'):
+                #计算式自动选择合适的精度
+                scores=model(click_docs,cand_docs)
+                loss=criterion(scores,labels)
+
+            # 使用scaler缩放精度并反向传播
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            # 更新缩放因子
+            scaler.update()
+
             total_loss+=loss.item()
         if epoch==1 or epoch%5==0:print(f"Epoch {epoch}, Loss: {total_loss / len(train_loader)}")
 

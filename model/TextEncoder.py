@@ -23,7 +23,7 @@ class AdditiveAttention(nn.Module):
         # 因为下一步要用softmax打分得到每个token的权重，需要去除最后一维度
         weights=self.proj_v(self.proj(context)).squeeze(-1)
         if mask is not None:
-            weights=weights.masked_fill(mask,-1e9)
+            weights=weights.masked_fill(mask,-65500.0)
         weights=torch.softmax(weights,dim=-1) # [B,seq_len]
         # bmm批量矩阵乘法，要求两个输入都必须是3D张量，且第一维相等
         # unsqueeze升维 weights->[B,1,seq_len]，最终得到[B,seq_len]
@@ -58,9 +58,7 @@ class TextEncoder(nn.Module):
         :return: [batch_size,encoder_size]
         """
         padding_mask=(x==0)
-        for i in range(padding_mask.shape[0]):
-            if padding_mask[i].all():
-                padding_mask[i, 0] = False
+        padding_mask[padding_mask.all(dim=1), 0] = False
 
         x = F.dropout(self.embedding(x), p=0.2, training=self.training) # [B,seq_len,embed_dim]
         output,_=self.multihead_attention(x,x,x,key_padding_mask=padding_mask) # [B,seq_len,embed_dim]
