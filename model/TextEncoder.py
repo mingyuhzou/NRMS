@@ -39,15 +39,15 @@ class TextEncoder(nn.Module):
         else:
             self.embedding = nn.Embedding.from_pretrained(weight, freeze=False,padding_idx=0)
 
+        self.input_projection=nn.Linear(hparams['embed_dim'],hparams['encoder_size'])
+
         # 2. 多头自注意力层,embed_dim指定模型的输入维度，输出维度默认等于输入维度
         self.multihead_attention = nn.MultiheadAttention(
-            embed_dim=self.hparams['embed_dim'],
+            embed_dim=self.hparams['encoder_size'],
             num_heads=hparams['nhead'],
             dropout=0.1,
             batch_first=True
         )
-        # 全连接层，使得新闻向量的维度不等于词向量
-        self.proj=nn.Linear(self.hparams['embed_dim'],hparams['encoder_size'])
         # 3. 注意力池化层
         self.additive_attention = AdditiveAttention(hparams['encoder_size'], hparams['v_size'])
 
@@ -61,10 +61,11 @@ class TextEncoder(nn.Module):
         padding_mask[padding_mask.all(dim=1), 0] = False
 
         x = F.dropout(self.embedding(x), p=0.2, training=self.training) # [B,seq_len,embed_dim]
+        x = self.input_projection(x)  # [B, seq_len, encoder_dim]
+
         output,_=self.multihead_attention(x,x,x,key_padding_mask=padding_mask) # [B,seq_len,embed_dim]
 
         output = F.dropout(output, p=0.2, training=self.training)
-        output=self.proj(output) #　[B,seq_len,encoder_size]
 
         output,_=self.additive_attention(output,mask=padding_mask) #　[B,encoder_size]
         return output

@@ -1,5 +1,6 @@
 import torch
-
+from sklearn.metrics import roc_auc_score
+import numpy as np
 
 def ndcg(probs, labels, k):
     # probs: [num_cands], labels: [num_cands]
@@ -19,3 +20,19 @@ def ndcg(probs, labels, k):
 
     if idcg == 0: return 0.
     return (dcg / idcg).item()
+
+
+def auc(probs, labels):
+    """
+    计算单个 Session 的 AUC
+    probs: [num_cands] - 模型预测的概率/原始分数
+    labels: [num_cands] - 真实的标签 (0 或 1)
+    """
+    y_true = labels.cpu().numpy()
+    y_score = probs.cpu().numpy()
+
+    # AUC 要求样本中必须同时包含 0 和 1
+    if len(np.unique(y_true)) < 2:
+        return None
+
+    return roc_auc_score(y_true, y_score)

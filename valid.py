@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from metric import ndcg
+from metric import ndcg,auc
 from config import hparams
 from model.NRMS import NRMS
 import pickle
@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 news_file=hparams['news_file']
-behaviors_file=hparams['behaviors_file']
+behaviors_file=hparams['behaviors_dev_file']
 w2v_file=hparams['w2v_file']
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -32,7 +32,12 @@ valid_loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
 def evaluate(model):
     model.eval()
-    res=[]
+
+    res_ndcg5 = []
+    res_ndcg10 = []
+    res_auc=[]
+
+
     with torch.no_grad():
         for click_docs,cand_docs,labels in tqdm(valid_loader):
             click_docs=click_docs.to(device) # 【1,max_hist_len,max_len】
@@ -42,9 +47,17 @@ def evaluate(model):
             logits=model(click_docs,cand_docs) # [1, num_cands]
             logits=logits.squeeze(0)
             if labels.sum()>0 and labels.sum()<len(labels):
-                scores=ndcg(logits,labels,k=10)
-                res.append(scores)
-    mean_ndcg=np.mean(res)
-    print(f"\n评估完成! nDCG@10: {mean_ndcg:.4f}")
+                res_ndcg10.append(ndcg(logits,labels,k=10))
+                res_ndcg5.append(ndcg(logits,labels,k=5))
+                current_auc = auc(logits, labels)
+                if current_auc is not None:
+                    res_auc.append(current_auc)
+
+    mean_auc = np.mean(res_auc) if res_auc else 0
+    mean_ndcg5 = np.mean(res_ndcg5) if res_ndcg5 else 0
+    mean_ndcg10 = np.mean(res_ndcg10) if res_ndcg10 else 0
+    print(f"AUC:{mean_auc:.4f}")
+    print(f"nDCG@5:{mean_ndcg5:.4f}")
+    print(f"nDCG@10:{mean_ndcg10:.4f}")
 
 evaluate(model)

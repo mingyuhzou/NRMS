@@ -8,7 +8,6 @@ from dataset import trainDataset
 from torch.utils.data import DataLoader
 import pickle
 from tqdm import tqdm
-from torch.cuda.amp import autocast,GradScaler
 
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 news_file=hparams['news_file']
@@ -16,7 +15,7 @@ behaviors_file=hparams['behaviors_file']
 w2v_file=hparams['w2v_file']
 
 train_dataset=trainDataset(news_file,behaviors_file,w2v_file,max_len=20,max_hist_len=50,neg_num=4)
-train_loader=DataLoader(dataset=train_dataset,batch_size=512,shuffle=True,num_workers=4,pin_memory=True)
+train_loader=DataLoader(dataset=train_dataset,batch_size=64,shuffle=True,num_workers=4,pin_memory=True)
 
 with open(w2v_file, 'rb') as f:
     data = pickle.load(f)
@@ -47,7 +46,6 @@ def train():
             optimizer.zero_grad()
 
             # 开启自动混合精度上下文，让GPU自动使用更低的精度，减少显存加速计算
-            # 原来：with autocast():
             with torch.amp.autocast('cuda'):
                 #计算式自动选择合适的精度
                 scores=model(click_docs,cand_docs)
@@ -66,4 +64,3 @@ train()
 
 model_path=hparams['model_path']
 torch.save(model.state_dict(), model_path)
-
