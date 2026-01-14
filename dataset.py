@@ -11,6 +11,7 @@ from processData import processNews
 # %%
 class trainDataset(Dataset):
     def __init__(self,news_file,behaviors_file,w2v_file,max_len,max_hist_len,neg_num):
+        # new_id->embed_id
         self.news_dict = processNews(news_file,w2v_file,max_len)
 
         self.behaviors=pl.read_parquet(behaviors_file)
@@ -36,6 +37,7 @@ class trainDataset(Dataset):
         click_docs=[self.news_dict.get(nid,self.news_dict['<PAD>']) for nid in history]
         # 补齐历史长度
         pad_vec = self.news_dict['<PAD>']
+        # 截断
         while len(click_docs) < self.max_hist_len:
             click_docs.append(pad_vec)
         

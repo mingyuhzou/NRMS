@@ -14,9 +14,11 @@ news_file=hparams['news_file']
 behaviors_file=hparams['behaviors_file']
 w2v_file=hparams['w2v_file']
 
+# 取数据
 train_dataset=trainDataset(news_file,behaviors_file,w2v_file,max_len=20,max_hist_len=50,neg_num=4)
 train_loader=DataLoader(dataset=train_dataset,batch_size=64,shuffle=True,num_workers=4,pin_memory=True)
 
+# 打开预训练词嵌入
 with open(w2v_file, 'rb') as f:
     data = pickle.load(f)
     w2id = data['w2id']
@@ -27,11 +29,13 @@ model=NRMS(hparams,matrix)
 model=model.to(device)
 criterion=nn.CrossEntropyLoss()
 
-optimizer=optim.Adam(model.parameters(),lr=hparams['lr'])
+# optimizer=optim.Adam(model.parameters(),lr=hparams['lr'])
 # optimizer=optim.Adam(model.parameters(),lr=hparams['lr'],weight_decay=1e-5)
-# optimizer=optim_.Ranger(model.parameters(),lr=hparams['lr'])
 
-# 缩放，泳衣防止梯度下溢
+# 效果更好
+optimizer=optim_.Ranger(model.parameters(),lr=hparams['lr'])
+
+# 缩放，防止梯度下溢
 scaler = torch.amp.GradScaler('cuda')
 
 def train():

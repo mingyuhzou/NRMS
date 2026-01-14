@@ -22,8 +22,7 @@ with open(w2v_file, 'rb') as f:
 
 # 加载模型
 model = NRMS(hparams,matrix)
-model_path=hparams['model_path']
-state_dict=torch.load(model_path,map_location=device)
+state_dict=torch.load(hparams['model_path'],map_location=device)
 model.load_state_dict(state_dict)
 model.to(device)
 

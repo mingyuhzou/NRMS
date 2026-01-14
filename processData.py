@@ -7,7 +7,7 @@ from config import hparams
 # %%
 def processW2vec(news_file,W2vec_file,save_path):
     """
-    从词表中提取本地数据中单词的向量，并构建一个word->id的字典
+    从词表中提取本地数据中单词的向量，并构建一个token->id的字典
     """
     news=pl.read_parquet(news_file)
 
@@ -53,10 +53,11 @@ def processNews(news_path,w2v_path,max_len=20):
     with open(w2v_path,'rb') as f:
         w2id=pickle.load(f)['w2id']
     def tokenize_and_map(title):
-        tokens=re.findall(r'\w+',title.lower())
-        token_ids=[w2id.get(t,1) for t in tokens]
+        tokens=re.findall(r'\w+',title.lower()) # 只保留单词的字母，并小写
+        token_ids=[w2id.get(t,1) for t in tokens] # 找不到则置为占位符
 
-        token_ids=token_ids[:max_len][:max_len]
+        token_ids=token_ids[:max_len]
+        # 补齐
         token_ids+=[0]*(max_len-len(token_ids))
         return token_ids
 
