@@ -1,6 +1,6 @@
 # 工作
 
-本项目复现NRMS模型(pytorch)，并未做改进。
+本项目实现NRMS模型(pytorch)，并未做改进。
 
 
 
